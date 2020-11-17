@@ -55,11 +55,14 @@ namespace zcpp
   extern bool exiting;
   extern std::stack <std::unique_ptr <translation_unit>> filestack;
 
-  std::string preprocess (std::string filename, std::istream &file);
+  std::string replace_comments (void);
 
   void init_console (void);
   void warning (std::string msg);
   void error (std::string msg);
+
+  int next_char (void);
+  std::string preprocess (std::string filename, std::istream &file);
 }
 
 #endif

@@ -1,5 +1,5 @@
 /*************************************************************************
- * zcpp.cc - This file is part of zcpp.                                  *
+ * comments.cc - This file is part of zcpp.                              *
  * Copyright (C) 2020 XNSC                                               *
  *                                                                       *
  * This program is free software: you can redistribute it and/or modify  *
@@ -16,16 +16,51 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>. *
  *************************************************************************/
 
-#include <iostream>
 #include "zcpp.hh"
 
-int
-main (int argc, char **argv)
+std::string
+zcpp::replace_comments (void)
 {
-  zcpp::init_console ();
-  std::string result = zcpp::preprocess ("<stdin>", std::cin);
-  if (zcpp::exiting)
-    std::exit (1);
-  std::cout << result;
-  return 0;
+  std::string result;
+  int c = zcpp::next_char ();
+  int last = '\0';
+  while (c != EOF)
+    {
+      if (c == '/')
+	{
+	  c = zcpp::next_char ();
+	  if (c == '*')
+	    {
+	      result += ' ';
+	      while (last != '*' || c != '/')
+		{
+		  if (c == EOF)
+		    {
+		      zcpp::error ("unterminated comment");
+		      return result;
+		    }
+		  else if (c == '\n')
+		    result += '\n';
+		  else
+		    result += ' ';
+		  last = c;
+		  c = zcpp::next_char ();
+		}
+	      result += ' ';
+	      last = '\0';
+	    }
+	  else
+	    {
+	      result += '/';
+	      continue;
+	    }
+	}
+      else
+	{
+	  result += c;
+	  last = c;
+	}
+      c = zcpp::next_char ();
+    }
+  return result;
 }

@@ -21,14 +21,22 @@
 
 std::stack <std::unique_ptr <zcpp::translation_unit>> zcpp::filestack;
 
+int
+zcpp::next_char (void)
+{
+  int c = zcpp::filestack.top ()->file.get ();
+  if (c == '\n')
+    zcpp::filestack.top ()->line++;
+  return c;
+}
+
 std::string
 zcpp::preprocess (std::string filename, std::istream &file)
 {
   zcpp::filestack.push (std::make_unique <zcpp::translation_unit> (filename,
 								   file));
 
-  zcpp::filestack.top ()->output =
-    std::string (std::istreambuf_iterator <char> (file), {});
+  zcpp::filestack.top ()->output = zcpp::replace_comments ();
 
   std::string result = zcpp::filestack.top ()->output;
   zcpp::filestack.pop ();

@@ -25,13 +25,13 @@ static bool tty;
 bool zcpp::exiting;
 
 void
-init_console (void)
+zcpp::init_console (void)
 {
   tty = isatty (STDERR_FILENO);
 }
 
 void
-warning (std::string msg)
+zcpp::warning (std::string msg)
 {
   if (tty)
     std::cerr << "\033[35;1mwarning:\033[37m ";
@@ -47,7 +47,7 @@ warning (std::string msg)
 }
 
 void
-error (std::string msg)
+zcpp::error (std::string msg)
 {
   if (tty)
     std::cerr << "\033[31;1merror:\033[37m ";
