@@ -24,6 +24,7 @@ zcpp::replace_comments (void)
   std::string result;
   int c = zcpp::next_char ();
   int last = '\0';
+  int realign = 0;
   while (c != EOF)
     {
       if (c == '/')
@@ -55,8 +56,31 @@ zcpp::replace_comments (void)
 	      continue;
 	    }
 	}
+      else if (c == '\\')
+	{
+	  do
+	    c = zcpp::next_char ();
+	  while (std::isspace (c) && c != '\n');
+	  if (c == EOF)
+	    {
+	      zcpp::warning ("ignoring backslash at end of file");
+	      return result;
+	    }
+	  if (c == '\n')
+	    {
+	      c = zcpp::next_char ();
+	      realign++;
+	      continue;
+	    }
+	}
       else
 	{
+	  if (c == '\n')
+	    {
+	      for (int i = 0; i < realign; i++)
+		result += '\n';
+	      realign = 0;
+	    }
 	  result += c;
 	  last = c;
 	}
