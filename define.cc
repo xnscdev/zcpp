@@ -20,18 +20,24 @@
 
 std::map <std::string, std::unique_ptr <zcpp::macro>> zcpp::defines;
 
-/*
-class macro
-  {
-  public:
-    std::vector <std::string> args;
-    bool func;
-    std::vector <std::string> sub;
-
-    explicit macro (std::string value);
-    macro (std::vector <std::string> args, std::string value);
-  };
-*/
+static void
+check_valid_identifier (std::vector <std::string> &args, std::string &value)
+{
+  if (value.empty () || (!std::isalpha (value[0]) && value[0] != '_'))
+    {
+      zcpp::error ("expected a valid identifier in parameter list");
+      return;
+    }
+  for (std::size_t i = 1; i < value.size (); i++)
+    {
+      if (!isalnum (value[i]) && value[i] != '_')
+	{
+	  zcpp::error ("expected a valid identifier in parameter list");
+	  return;
+	}
+    }
+  args.push_back (value);
+}
 
 zcpp::macro::macro (std::string value)
 {
@@ -39,10 +45,23 @@ zcpp::macro::macro (std::string value)
   sub.push_back (value);
 }
 
-zcpp::macro::macro (std::vector <std::string> args, std::string value)
+zcpp::macro::macro (std::vector <std::string> args, std::string value) :
+  args (args)
 {
   func = true;
-  sub.push_back (value); /* TODO Parse parameters */
+  std::size_t i = 0;
+  while (i < value.size ())
+    {
+      std::string temp;
+      if (isalpha (value[i]) || value[i] == '_')
+        zcpp::expect_read_identifier (temp, value, i);
+      else
+	{
+	  while (i < value.size () && !isalpha (value[i]) && value[i] != '_')
+	    temp += value[i++];
+	}
+      sub.push_back (temp);
+    }
 }
 
 #include <iostream>
@@ -60,6 +79,27 @@ zcpp::define (std::string name, std::string value)
     {
       i++;
       std::vector <std::string> args;
+      std::string temp;
+      for (; i < name.size (); i++)
+	{
+	  if (std::isspace (name[i]))
+	    continue;
+	  if (name[i] == ',')
+	    {
+	      check_valid_identifier (args, temp);
+	      temp.clear ();
+	    }
+	  else
+	    temp += name[i];
+	}
+      if (temp.empty ())
+	{
+	  zcpp::error ("extraneous comma at end of parameter list");
+	  return;
+	}
+      check_valid_identifier (args, temp);
+      if (zcpp::exiting)
+	return;
       macro = std::make_unique <zcpp::macro> (args, value);
     }
   else
