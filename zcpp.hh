@@ -56,15 +56,25 @@ namespace zcpp
   extern bool exiting;
   extern std::stack <std::unique_ptr <translation_unit>> filestack;
 
-  std::string replace_comments (void);
+  std::string replace_comments_escapes (void);
 
   void init_console (void);
   std::string bold (std::string s);
   void warning (std::string msg);
   void error (std::string msg);
 
+  std::string parse_directives (void);
+
   int next_char (void);
+  void change_line (unsigned long line, std::string *filename);
   std::string preprocess (std::string filename, std::istream &file);
+
+  std::string stamp_file (void);
+
+  void expect_read_identifier (std::string &result, const std::string &input,
+			       std::size_t &pos, bool first_num = false);
+  void expect_read_string (std::string &result, const std::string &input,
+			   std::size_t &pos);
 }
 
 #endif

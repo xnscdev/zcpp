@@ -19,7 +19,7 @@
 #include "zcpp.hh"
 
 std::string
-zcpp::replace_comments (void)
+zcpp::replace_comments_escapes (void)
 {
   std::string result;
   int c = zcpp::next_char ();
@@ -58,8 +58,12 @@ zcpp::replace_comments (void)
 	}
       else if (c == '\\')
 	{
+	  std::string fail;
 	  do
-	    c = zcpp::next_char ();
+	    {
+	      c = zcpp::next_char ();
+	      fail += c;
+	    }
 	  while (std::isspace (c) && c != '\n');
 	  if (c == EOF)
 	    {
@@ -72,17 +76,18 @@ zcpp::replace_comments (void)
 	      realign++;
 	      continue;
 	    }
+	  else
+	    result += '\\' + fail;
 	}
       else
 	{
-	  if (c == '\n')
-	    {
-	      for (int i = 0; i < realign; i++)
-		result += '\n';
-	      realign = 0;
-	    }
 	  result += c;
 	  last = c;
+	  if (c == '\n' && realign > 0)
+	    {
+	      result += zcpp::stamp_file ();
+	      realign = 0;
+	    }
 	}
       c = zcpp::next_char ();
     }

@@ -9,7 +9,10 @@ configure_file(input: 'config.h.in', output: 'config.h',
 zcpp_src = [
   'comments.cc',
   'console.cc',
+  'directive.cc',
   'entry.cc',
+  'include.cc',
+  'util.cc',
   'zcpp.cc'
 ]
 executable('zcpp', zcpp_src, install: true)
