@@ -20,11 +20,16 @@
 
 #define input zcpp::filestack.top ()->output
 
+static std::stack <bool> ifstack;
+static std::string ifdef_names[] = {"#ifndef", "#ifdef"};
+
 static void
 parse_define (const std::string &content)
 {
   std::string name;
   std::size_t i = 0;
+  if (!ifstack.top ())
+    return;
   if (content.empty ())
     {
       zcpp::error ("#define directive missing macro name");
@@ -61,10 +66,37 @@ parse_define (const std::string &content)
 }
 
 static void
+parse_endif (const std::string &content)
+{
+  if (!content.empty ())
+    zcpp::warning ("ignoring extra tokens at end of #endif directive");
+  if (ifstack.size () > 1)
+    ifstack.pop ();
+  else
+    zcpp::error ("unmatched #endif directive");
+}
+
+static void
+parse_ifdef (bool truth, const std::string &content)
+{
+  std::string name;
+  std::size_t i = 0;
+  if (!ifstack.top ())
+    return;
+  zcpp::expect_read_identifier (name, content, i, false, true);
+  if (i < content.size ())
+    zcpp::warning (std::string ("ignoring extra tokens at end of ") +
+		   ifdef_names[(int) truth] + " directive");
+  ifstack.push (truth == (zcpp::defines.find (name) != zcpp::defines.end ()));
+}
+
+static void
 parse_line (const std::string &content)
 {
   unsigned long line = 0;
   std::size_t i = 0;
+  if (!ifstack.top ())
+    return;
   while (i < content.size () && std::isdigit (content[i]))
     {
       line *= 10;
@@ -98,6 +130,8 @@ parse_undef (const std::string &content)
 {
   std::string name;
   std::size_t i = 0;
+  if (!ifstack.top ())
+    return;
   if (content.empty ())
     {
       zcpp::error ("#undef directive missing macro name");
@@ -118,8 +152,12 @@ parse_directive (std::string &result, const std::string &name,
 {
   if (name == "define")
     parse_define (content);
+  else if (name == "endif")
+    parse_endif (content);
   else if (name == "error")
     zcpp::error ("#error " + content);
+  else if (name == "ifdef" || name == "ifndef")
+    parse_ifdef (name == "ifdef", content);
   else if (name == "line")
     parse_line (content);
   else if (name == "undef")
@@ -128,6 +166,8 @@ parse_directive (std::string &result, const std::string &name,
     zcpp::warning ("#warning " + content);
   else
     {
+      if (!ifstack.top ())
+	return;
       unsigned long line;
       for (char c : name)
 	{
@@ -162,6 +202,7 @@ zcpp::parse_directives (void)
   std::string result;
   int last = '\n'; /* Begin accepting directives */
   zcpp::filestack.top ()->line = 0; /* Reset line numbering */
+  ifstack.push (true);
   for (std::size_t pos = 0; pos < input.size (); pos++)
     {
       if (last == '\n' && input[pos] == '#')
@@ -182,7 +223,8 @@ zcpp::parse_directives (void)
 		    pos++;
 		  continue;
 		}
-	      while (pos < input.size () && std::isspace (input[pos]))
+	      while (pos < input.size () && std::isspace (input[pos])
+		     && input[pos] != '\n')
 		pos++;
 	    }
 
@@ -193,7 +235,8 @@ zcpp::parse_directives (void)
 	  parse_directive (result, name, content);
 	}
     end:
-      result += input[pos];
+      if (ifstack.top ())
+	result += input[pos];
 
       if (input[pos] == '\n')
 	zcpp::filestack.top ()->line++;

@@ -20,6 +20,5 @@
 #define _CONFIG_H
 
 #define PROJECT_VERSION "@PROJECT_VERSION@"
-#define MAX_NESTED_IFS @MAX_NESTED_IFS@
 
 #endif

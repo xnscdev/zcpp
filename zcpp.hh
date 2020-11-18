@@ -74,7 +74,8 @@ namespace zcpp
   std::string stamp_file (void);
 
   void expect_read_identifier (std::string &result, const std::string &input,
-			       std::size_t &pos, bool first_num = false);
+			       std::size_t &pos, bool first_num = false,
+			       bool end_space = false);
   void expect_read_string (std::string &result, const std::string &input,
 			   std::size_t &pos);
 }
