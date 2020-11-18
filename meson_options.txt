@@ -1,0 +1,1 @@
+option('max_nested_ifs', type: 'integer', min: 1, value: 256)

@@ -30,6 +30,14 @@ zcpp::init_console (void)
   tty = isatty (STDERR_FILENO);
 }
 
+std::string
+zcpp::bold (std::string s)
+{
+  if (tty)
+    return "\033[1m" + s + "\033[0m";
+  return '\'' + s + '\'';
+}
+
 void
 zcpp::warning (std::string msg)
 {

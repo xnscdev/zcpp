@@ -16,16 +16,111 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>. *
  *************************************************************************/
 
+#include <cstring>
+#include <fstream>
 #include <iostream>
 #include "zcpp.hh"
+
+std::istream *input = &std::cin;
+std::string input_filename = "<stdin>";
+std::ostream *output = &std::cout;
+bool reserved[2];
+
+static struct
+{
+  const char *flag;
+  const char *desc;
+} options[] = {
+  {"-h, --help", "Show this help text and exit"},
+  {"-o FILE", "Write output to FILE"},
+  {"--version", "Show the version of this program and exit"}
+};
+
+static void
+usage (void)
+{
+  std::cout << "Usage: zcpp [OPTIONS] [FILE...]" << std::endl
+	    << "Options:" << std::endl;
+  for (std::size_t i = 0; i < sizeof options / sizeof *options; i++)
+    std::printf ("  %-24s%s\n", options[i].flag, options[i].desc);
+}
+
+static void
+version (void)
+{
+  std::cout << "zcpp " PROJECT_VERSION << std::endl;
+}
 
 int
 main (int argc, char **argv)
 {
+  zcpp::filestack.push
+    (std::make_unique <zcpp::translation_unit> ("<command-line>", std::cin));
   zcpp::init_console ();
-  std::string result = zcpp::preprocess ("<stdin>", std::cin);
+  bool parsing_opts = true;
+  for (int i = 1; i < argc; i++)
+    {
+      std::string arg (argv[i]);
+      if (arg.empty ())
+	continue;
+      else if (parsing_opts && arg[0] == '-')
+	{
+	  if (arg == "-h" || arg == "--help")
+	    {
+	      usage ();
+	      std::exit (0);
+	    }
+	  else if (arg == "-o")
+	    {
+	      if (i >= argc - 1)
+		{
+		  zcpp::error ("option " + zcpp::bold ("-o") +
+			       " requires an argument");
+		  continue;
+		}
+	      std::string filename (argv[++i]);
+	      output = new std::ofstream (filename);
+	      reserved[1] = true;
+	      if (output == nullptr || !output->good ())
+	        zcpp::error ("failed to open output file " +
+			     zcpp::bold (arg) + ": " + std::strerror (errno));
+	    }
+	  else if (arg == "--version")
+	    {
+	      version ();
+	      std::exit (0);
+	    }
+	  else if (arg == "--")
+	    parsing_opts = false;
+	  else
+	    zcpp::error ("unrecognized command-line option: " + arg);
+	}
+      else if (!reserved[0])
+	{
+	  input = new std::ifstream (arg);
+	  input_filename = arg;
+	  if (input == nullptr || !input->good ())
+	    zcpp::error ("failed to open input file " + zcpp::bold (arg) +
+			 ": " + std::strerror (errno));
+	  reserved[0] = true;
+	}
+      else if (!reserved[1])
+	{
+	  output = new std::ofstream (arg);
+	  if (output == nullptr || !output->good ())
+	    zcpp::error ("failed to open output file " + zcpp::bold (arg) +
+			 ": " + std::strerror (errno));
+	  reserved[1] = true;
+	}
+      else
+	zcpp::error ("too many files specified");
+    }
   if (zcpp::exiting)
     std::exit (1);
-  std::cout << result;
+
+  std::string result = zcpp::preprocess (input_filename, *input);
+  if (zcpp::exiting)
+    std::exit (1);
+  *output << result;
   return 0;
 }
