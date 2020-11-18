@@ -21,6 +21,46 @@
 #define input zcpp::filestack.top ()->output
 
 static void
+parse_define (const std::string &content)
+{
+  std::string name;
+  std::size_t i = 0;
+  if (content.empty ())
+    {
+      zcpp::error ("#define directive missing macro name");
+      return;
+    }
+  zcpp::expect_read_identifier (name, content, i);
+  if (i >= content.size ())
+    {
+      zcpp::define (name, std::string ());
+      return;
+    }
+
+  if (content[i] == '(')
+    {
+      i++;
+      name += ' ';
+      while (i < content.size () && content[i] != ')')
+	name += content[i++];
+      if (content[i] != ')')
+	{
+	  zcpp::error ("unterminated function macro parameter list");
+	  return;
+	}
+      i++;
+    }
+  if (!std::isspace (content[i]))
+    {
+      zcpp::error ("macro name must be a valid identifier");
+      return;
+    }
+  while (i < content.size () && std::isspace (content[i]))
+    i++;
+  zcpp::define (name, content.substr (i));
+}
+
+static void
 parse_line (const std::string &content)
 {
   unsigned long line = 0;
@@ -54,13 +94,36 @@ parse_line (const std::string &content)
 }
 
 static void
+parse_undef (const std::string &content)
+{
+  std::string name;
+  std::size_t i = 0;
+  if (content.empty ())
+    {
+      zcpp::error ("#undef directive missing macro name");
+      return;
+    }
+  zcpp::expect_read_identifier (name, content, i);
+  zcpp::defines.erase (name);
+
+  while (i < content.size () && std::isspace (content[i]))
+    i++;
+  if (i < content.size ())
+    zcpp::warning ("ignoring extra tokens at end of #undef directive");
+}
+
+static void
 parse_directive (std::string &result, const std::string &name,
 		 const std::string &content)
 {
-  if (name == "error")
+  if (name == "define")
+    parse_define (content);
+  else if (name == "error")
     zcpp::error ("#error " + content);
   else if (name == "line")
     parse_line (content);
+  else if (name == "undef")
+    parse_undef (content);
   else if (name == "warning")
     zcpp::warning ("#warning " + content);
   else
@@ -85,6 +148,7 @@ parse_directive (std::string &result, const std::string &name,
 	  zcpp::change_line (line, &filename);
 	  result += "# " + std::to_string (line) + " \"" + filename + '"';
 	}
+      zcpp::filestack.top ()->line--;
       return;
 
     err:
@@ -97,6 +161,7 @@ zcpp::parse_directives (void)
 {
   std::string result;
   int last = '\n'; /* Begin accepting directives */
+  zcpp::filestack.top ()->line = 0; /* Reset line numbering */
   for (std::size_t pos = 0; pos < input.size (); pos++)
     {
       if (last == '\n' && input[pos] == '#')
@@ -108,6 +173,18 @@ zcpp::parse_directives (void)
 	  if (input[pos] == '\n')
 	    goto end; /* Null directive */
 	  expect_read_identifier (name, input, pos, true);
+	  if (pos < input.size ())
+	    {
+	      if (!std::isspace (input[pos]))
+		{
+		  error ("expected an identifier in directive name");
+		  while (pos < input.size () && input[pos] != '\n')
+		    pos++;
+		  continue;
+		}
+	      while (pos < input.size () && std::isspace (input[pos]))
+		pos++;
+	    }
 
 	  std::string content;
 	  while (pos < input.size () && input[pos] != '\n')
@@ -118,6 +195,8 @@ zcpp::parse_directives (void)
     end:
       result += input[pos];
 
+      if (input[pos] == '\n')
+	zcpp::filestack.top ()->line++;
       if (!std::isspace (input[pos]) || input[pos] == '\n')
 	last = input[pos];
     }

@@ -9,6 +9,7 @@ configure_file(input: 'config.h.in', output: 'config.h',
 zcpp_src = [
   'comments.cc',
   'console.cc',
+  'define.cc',
   'directive.cc',
   'entry.cc',
   'include.cc',

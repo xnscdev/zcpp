@@ -1,5 +1,5 @@
 /*************************************************************************
- * zcpp.hh - This file is part of zcpp.                                  *
+ * define.cc - This file is part of zcpp.                                *
  * Copyright (C) 2020 XNSC                                               *
  *                                                                       *
  * This program is free software: you can redistribute it and/or modify  *
@@ -16,32 +16,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>. *
  *************************************************************************/
 
-#ifndef _ZCPP_HH
-#define _ZCPP_HH
+#include "zcpp.hh"
 
-#include <istream>
-#include <map>
-#include <memory>
-#include <stack>
-#include <string>
-#include <vector>
-#include "config.h"
+std::map <std::string, std::unique_ptr <zcpp::macro>> zcpp::defines;
 
-namespace zcpp
-{
-  class translation_unit
-  {
-  public:
-    std::string filename;
-    std::string output;
-    std::istream &file;
-    std::size_t line;
-
-    translation_unit (std::string filename, std::istream &file) :
-      filename (std::move (filename)), file (file), line (1) {}
-  };
-
-  class macro
+/*
+class macro
   {
   public:
     std::vector <std::string> args;
@@ -51,32 +31,41 @@ namespace zcpp
     explicit macro (std::string value);
     macro (std::vector <std::string> args, std::string value);
   };
+*/
 
-  extern bool exiting;
-  extern std::stack <std::unique_ptr <translation_unit>> filestack;
-  extern std::map <std::string, std::unique_ptr <macro>> defines;
-
-  std::string replace_comments_escapes (void);
-
-  void init_console (void);
-  std::string bold (std::string s);
-  void warning (std::string msg);
-  void error (std::string msg);
-
-  void define (std::string name, std::string value);
-
-  std::string parse_directives (void);
-
-  int next_char (void);
-  void change_line (unsigned long line, std::string *filename);
-  std::string preprocess (std::string filename, std::istream &file);
-
-  std::string stamp_file (void);
-
-  void expect_read_identifier (std::string &result, const std::string &input,
-			       std::size_t &pos, bool first_num = false);
-  void expect_read_string (std::string &result, const std::string &input,
-			   std::size_t &pos);
+zcpp::macro::macro (std::string value)
+{
+  func = false;
+  sub.push_back (value);
 }
 
-#endif
+zcpp::macro::macro (std::vector <std::string> args, std::string value)
+{
+  func = true;
+  sub.push_back (value); /* TODO Parse parameters */
+}
+
+#include <iostream>
+
+void
+zcpp::define (std::string name, std::string value)
+{
+  std::string realname;
+  std::size_t i;
+  for (i = 0; i < name.size () && name[i] != ' '; i++)
+    realname += name[i];
+
+  std::unique_ptr <zcpp::macro> macro;
+  if (name[i] == ' ')
+    {
+      i++;
+      std::vector <std::string> args;
+      macro = std::make_unique <zcpp::macro> (args, value);
+    }
+  else
+    macro = std::make_unique <zcpp::macro> (value);
+
+  if (zcpp::defines.find (realname) != zcpp::defines.end ())
+    warning ("redefining macro: " + realname);
+  zcpp::defines[realname] = std::move (macro);
+}
