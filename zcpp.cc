@@ -22,16 +22,12 @@
 #include <iostream>
 #include "zcpp.hh"
 
-#define GUARD_REQUIRED_ARG do				\
+#define GUARD_REQUIRED_ARG if (i >= argc - 1)		\
     {							\
-      if (i >= argc - 1)				\
-	{						\
-	  zcpp::error ("option " + zcpp::bold (arg) +   \
-		       " requires an argument");	\
-	  continue;					\
-	}						\
-    }							\
-  while (false)
+      zcpp::error ("option " + zcpp::bold (arg) +	\
+		   " requires an argument");		\
+      continue;						\
+    }
 
 std::istream *input = &std::cin;
 std::string input_filename = "<stdin>";
@@ -107,6 +103,25 @@ main (int argc, char **argv)
 		  continue;
 		}
 	      zcpp::add_includedir (path, includetypes[arg]);
+	      continue;
+	    }
+	  if (arg.rfind ("-I", 0) == 0)
+	    {
+	      std::string path;
+	      if (arg.size () < 3)
+		{
+		  GUARD_REQUIRED_ARG;
+		  path = std::string (argv[++i]);
+		  if (path.empty ())
+		    {
+		      zcpp::error ("argument of " + zcpp::bold (arg) +
+				   " must be a valid path");
+		      continue;
+		    }
+		}
+	      else
+		path = arg.substr (2);
+	      zcpp::add_includedir (path, zcpp::include::regular);
 	      continue;
 	    }
 	  if (arg == "-o" || arg == "--output")
