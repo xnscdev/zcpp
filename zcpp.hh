@@ -52,9 +52,26 @@ namespace zcpp
     macro (std::vector <std::string> args, std::string value);
   };
 
+  class include
+  {
+  public:
+    std::string path;
+    int type;
+
+    static const int quote;
+    static const int regular;
+    static const int system;
+    static const int dirafter;
+
+    include (std::string path, int type) : path (std::move (path)),
+					   type (type) {}
+  };
+
   extern bool exiting;
   extern std::stack <std::unique_ptr <translation_unit>> filestack;
   extern std::map <std::string, std::unique_ptr <macro>> defines;
+  extern std::vector <include> includes;
+  extern bool verbose;
 
   std::string replace_comments_escapes (void);
 
@@ -71,6 +88,7 @@ namespace zcpp
   void change_line (unsigned long line, std::string *filename);
   std::string preprocess (std::string filename, std::istream &file);
 
+  void add_includedir (std::string path, int type);
   std::string stamp_file (void);
 
   void expect_read_identifier (std::string &result, const std::string &input,

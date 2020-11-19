@@ -17,14 +17,34 @@
  *************************************************************************/
 
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include "zcpp.hh"
+
+#define GUARD_REQUIRED_ARG do				\
+    {							\
+      if (i >= argc - 1)				\
+	{						\
+	  zcpp::error ("option " + zcpp::bold (arg) +   \
+		       " requires an argument");	\
+	  continue;					\
+	}						\
+    }							\
+  while (false)
 
 std::istream *input = &std::cin;
 std::string input_filename = "<stdin>";
 std::ostream *output = &std::cout;
 bool reserved[2];
+
+bool zcpp::verbose;
+
+static std::map <std::string, int> includetypes = {
+  {"-idirafter", zcpp::include::dirafter},
+  {"-iquote", zcpp::include::quote},
+  {"-isystem", zcpp::include::system}
+};
 
 static struct
 {
@@ -32,7 +52,12 @@ static struct
   const char *desc;
 } options[] = {
   {"-h, --help", "Show this help text and exit"},
-  {"-o FILE", "Write output to FILE"},
+  {"-idirafter DIR", "Add DIR to the end of the include search path"},
+  {"-iquote DIR", "Add DIR to the quoted-only include search path"},
+  {"-isystem DIR", "Add DIR to the system include search path"},
+  {"-I DIR", "Add DIR to the default include search path"},
+  {"-o FILE, --output=FILE", "Write output to FILE"},
+  {"-v, --verbose", "Write verbose output"},
   {"--version", "Show the version of this program and exit"}
 };
 
@@ -42,7 +67,7 @@ usage (void)
   std::cout << "Usage: zcpp [OPTIONS] [FILE...]" << std::endl
 	    << "Options:" << std::endl;
   for (std::size_t i = 0; i < sizeof options / sizeof *options; i++)
-    std::printf ("  %-24s%s\n", options[i].flag, options[i].desc);
+    std::printf ("  %-24s %s\n", options[i].flag, options[i].desc);
 }
 
 static void
@@ -57,6 +82,7 @@ main (int argc, char **argv)
   zcpp::filestack.push
     (std::make_unique <zcpp::translation_unit> ("<command-line>", std::cin));
   zcpp::init_console ();
+  zcpp::includes.emplace_back (".", zcpp::include::quote);
   bool parsing_opts = true;
   for (int i = 1; i < argc; i++)
     {
@@ -70,30 +96,68 @@ main (int argc, char **argv)
 	      usage ();
 	      std::exit (0);
 	    }
-	  else if (arg == "-o")
+	  if (arg == "-idirafter" || arg == "-iquote" || arg == "-isystem")
 	    {
-	      if (i >= argc - 1)
+	      GUARD_REQUIRED_ARG;
+	      std::string path (argv[++i]);
+	      if (path.empty ())
 		{
-		  zcpp::error ("option " + zcpp::bold ("-o") +
-			       " requires an argument");
+		  zcpp::error ("argument of " + zcpp::bold (arg) +
+			       " must be a valid path");
 		  continue;
 		}
+	      zcpp::add_includedir (path, includetypes[arg]);
+	      continue;
+	    }
+	  if (arg == "-o" || arg == "--output")
+	    {
+	      GUARD_REQUIRED_ARG;
 	      std::string filename (argv[++i]);
+	      if (filename.empty ())
+		{
+		  zcpp::error ("output filename cannot be empty");
+		  continue;
+		}
 	      output = new std::ofstream (filename);
 	      reserved[1] = true;
 	      if (output == nullptr || !output->good ())
 	        zcpp::error ("failed to open output file " +
-			     zcpp::bold (arg) + ": " + std::strerror (errno));
+			     zcpp::bold (arg) + ": " +
+			     std::strerror (errno));
+	      continue;
 	    }
-	  else if (arg == "--version")
+	  if (arg.rfind ("--output=", 0) == 0)
+	    {
+	      arg.erase (0, 9);
+	      if (arg.empty ())
+		{
+		  zcpp::error ("output filename cannot be empty");
+		  continue;
+		}
+	      output = new std::ofstream (arg);
+	      reserved[1] = true;
+	      if (output == nullptr || !output->good ())
+		zcpp::error ("failed to open output file " +
+			     zcpp::bold (arg) + ": " +
+			     std::strerror (errno));
+	      continue;
+	    }
+	  if (arg == "-v" || arg == "--verbose")
+	    {
+	      zcpp::verbose = true;
+	      continue;
+	    }
+	  if (arg == "--version")
 	    {
 	      version ();
 	      std::exit (0);
 	    }
-	  else if (arg == "--")
-	    parsing_opts = false;
-	  else
-	    zcpp::error ("unrecognized command-line option: " + arg);
+	  if (arg == "--")
+	    {
+	      parsing_opts = false;
+	      continue;
+	    }
+	  zcpp::error ("unrecognized command-line option: " + arg);
 	}
       else if (!reserved[0])
 	{
@@ -117,6 +181,28 @@ main (int argc, char **argv)
     }
   if (zcpp::exiting)
     std::exit (1);
+
+  zcpp::add_includedir ("/usr/local/include", zcpp::include::system);
+  zcpp::add_includedir ("/usr/include", zcpp::include::system);
+
+  std::string input_path =
+    std::filesystem::path (input_filename).parent_path ();
+  if (input_path.empty ())
+    zcpp::includes.front ().path = ".";
+  else
+    zcpp::includes.front ().path = input_path;
+
+  if (zcpp::verbose)
+    {
+      std::cerr << "Include search path" << std::endl;
+      for (const zcpp::include &dir : zcpp::includes)
+	{
+	  std::cerr << "  " << dir.path;
+	  if (dir.type == zcpp::include::quote)
+	    std::cerr << " (quoted)";
+	  std::cerr << std::endl;
+	}
+    }
 
   std::string result = zcpp::preprocess (input_filename, *input);
   if (zcpp::exiting)

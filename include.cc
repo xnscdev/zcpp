@@ -18,6 +18,31 @@
 
 #include "zcpp.hh"
 
+std::vector <zcpp::include> zcpp::includes;
+
+const int zcpp::include::quote = 0;
+const int zcpp::include::regular = 1;
+const int zcpp::include::system = 2;
+const int zcpp::include::dirafter = 3;
+
+void
+zcpp::add_includedir (std::string path, int type)
+{
+  if (!includes.empty ())
+    {
+      for (std::vector <zcpp::include>::iterator i = zcpp::includes.begin ();
+	   i != zcpp::includes.end (); i++)
+	{
+	  if (i->type > type)
+	    {
+	      zcpp::includes.insert (i, zcpp::include (path, type));
+	      return;
+	    }
+	}
+    }
+  zcpp::includes.emplace_back (path, type);
+}
+
 std::string
 zcpp::stamp_file (void)
 {

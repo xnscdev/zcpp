@@ -1,4 +1,5 @@
-project('zcpp', 'cpp', version: '0.1', license: 'GPL-3.0-or-later')
+project('zcpp', 'cpp', version: '0.1', license: 'GPL-3.0-or-later',
+	default_options: 'cpp_std=gnu++17')
 
 zcpp_conf = configuration_data()
 zcpp_conf.set('PROJECT_VERSION', meson.project_version())
