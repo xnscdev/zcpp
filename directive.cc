@@ -16,6 +16,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>. *
  *************************************************************************/
 
+#include <cstring>
+#include <fstream>
 #include "zcpp.hh"
 
 #define input zcpp::filestack.top ()->output
@@ -91,6 +93,52 @@ parse_ifdef (bool truth, const std::string &content)
 }
 
 static void
+parse_include (std::string &result, const std::string &content)
+{
+  if (content.empty () || (content[0] != '<' && content[0] != '"'))
+    {
+      zcpp::error ("expected " + zcpp::bold ("<filename>") + " or " +
+		   zcpp::bold ("\"filename\"") + " after #include directive");
+      return;
+    }
+  char end = content[0] == '<' ? '>' : '"';
+
+  std::size_t i;
+  std::string path;
+  for (i = 1; i < content.size () && content[i] != end; i++)
+    path += content[i];
+  if (i++ >= content.size ())
+    {
+      zcpp::error ("#include directive missing terminating " +
+		   zcpp::bold (std::string (end, 1)) + " character");
+      return;
+    }
+
+  while (i < content.size () && std::isspace (content[i]))
+    i++;
+  if (i < content.size ())
+    zcpp::warning ("ignoring extra tokens at end of #include directive");
+
+  for (const zcpp::include &dir : zcpp::includes)
+    {
+      if (end == '>' && dir.type == zcpp::include::quote)
+	continue;
+      std::string filename = dir.path + '/' + path;
+      std::ifstream file (filename);
+      if (!file.good ())
+	continue;
+      std::string output = zcpp::preprocess (filename, file);
+      if (zcpp::exiting)
+	return;
+      result += output;
+      result += zcpp::stamp_file ();
+      return;
+    }
+  zcpp::error ("failed to find " + zcpp::bold (path) + ": " +
+	       std::strerror (errno));
+}
+
+static void
 parse_line (const std::string &content)
 {
   unsigned long line = 0;
@@ -158,6 +206,8 @@ parse_directive (std::string &result, const std::string &name,
     zcpp::error ("#error " + content);
   else if (name == "ifdef" || name == "ifndef")
     parse_ifdef (name == "ifdef", content);
+  else if (name == "include")
+    parse_include (result, content);
   else if (name == "line")
     parse_line (content);
   else if (name == "undef")
