@@ -68,6 +68,17 @@ parse_define (const std::string &content)
 }
 
 static void
+parse_else (const std::string &content)
+{
+  if (!content.empty ())
+    zcpp::warning ("ignoring extra tokens at end of #else directive");
+  if (ifstack.size () > 1)
+    ifstack.top () ^= true;
+  else
+    zcpp::error ("unmatched #else directive");
+}
+
+static void
 parse_endif (const std::string &content)
 {
   if (!content.empty ())
@@ -200,6 +211,8 @@ parse_directive (std::string &result, const std::string &name,
 {
   if (name == "define")
     parse_define (content);
+  else if (name == "else")
+    parse_else (content);
   else if (name == "endif")
     parse_endif (content);
   else if (name == "error")
