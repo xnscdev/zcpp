@@ -109,3 +109,32 @@ zcpp::define (std::string name, std::string value)
     warning ("redefining macro: " + realname);
   zcpp::defines[realname] = std::move (macro);
 }
+
+std::string
+zcpp::expand (const std::string &s)
+{
+  std::string result;
+  std::size_t i = 0;
+  while (i < s.size ())
+    {
+      if (isalpha (s[i]) || s[i] == '_')
+	{
+	  std::string name;
+	  zcpp::expect_read_identifier (name, s, i);
+	  if (zcpp::defines.find (name) != zcpp::defines.end ())
+	    {
+	      const std::unique_ptr <zcpp::macro> &macro =
+		zcpp::defines[name];
+	      if (macro->func)
+	        ; /* TODO Add function macro expansion */
+	      else
+	        result += macro->sub[0];
+	    }
+	  else
+	    result += name;
+	}
+      else
+        result += s[i++];
+    }
+  return result;
+}

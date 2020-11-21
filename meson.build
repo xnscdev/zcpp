@@ -12,6 +12,7 @@ zcpp_src = [
   'define.cc',
   'directive.cc',
   'entry.cc',
+  'ifexpr.cc',
   'include.cc',
   'util.cc',
   'zcpp.cc'

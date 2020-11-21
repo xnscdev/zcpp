@@ -29,6 +29,80 @@
 
 namespace zcpp
 {
+  namespace ifexpr
+  {
+    class number;
+
+    class expr
+    {
+    public:
+      virtual ~expr (void) = default;
+
+      virtual number eval (void);
+    };
+
+    class binary : public expr
+    {
+    public:
+      int op;
+      expr &lhs;
+      expr &rhs;
+
+      static const int plus;
+      static const int minus;
+      static const int multiply;
+      static const int divide;
+      static const int bitwise_and;
+      static const int bitwise_or;
+      static const int bitwise_xor;
+      static const int left_shift;
+      static const int right_shift;
+      static const int logical_and;
+      static const int logical_or;
+
+      binary (int op, expr &lhs, expr &rhs) : op (op), lhs (lhs),
+					      rhs (rhs) {}
+
+      virtual number eval (void);
+    };
+
+    class defined : public expr
+    {
+    public:
+      std::string macro;
+
+      explicit defined (std::string macro) : macro (std::move (macro)) {}
+
+      virtual number eval (void);
+    };
+
+    class number : public expr
+    {
+    public:
+      bool is_signed;
+      unsigned long long raw;
+
+      explicit number (unsigned long long raw, bool is_signed) :
+	is_signed (is_signed), raw (raw) {}
+
+      zcpp::ifexpr::number operator+ (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator- (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator* (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator/ (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator& (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator| (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator^ (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator<< (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator>> (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator&& (const zcpp::ifexpr::number &rhs);
+      zcpp::ifexpr::number operator|| (const zcpp::ifexpr::number &rhs);
+
+      virtual number eval (void);
+    };
+
+    bool eval (const std::string &s);
+  }
+
   class translation_unit
   {
   public:
@@ -81,6 +155,7 @@ namespace zcpp
   void error (std::string msg);
 
   void define (std::string name, std::string value);
+  std::string expand (const std::string &s);
 
   std::string parse_directives (void);
 

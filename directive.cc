@@ -90,6 +90,17 @@ parse_endif (const std::string &content)
 }
 
 static void
+parse_if (const std::string &content)
+{
+  if (!ifstack.top ())
+    return;
+  if (content.empty ())
+    zcpp::error ("expected expression after #if directive");
+  else
+    ifstack.push (zcpp::ifexpr::eval (content));
+}
+
+static void
 parse_ifdef (bool truth, const std::string &content)
 {
   std::string name;
@@ -161,6 +172,7 @@ parse_line (const std::string &content)
       line *= 10;
       line += content[i++] - '0';
     }
+  line--;
   if (i >= content.size ())
     {
       zcpp::change_line (line, nullptr);
@@ -274,8 +286,11 @@ zcpp::parse_directives (void)
 	  do
 	    pos++;
 	  while (std::isspace (input[pos]) && input[pos] != '\n');
-	  if (input[pos] == '\n')
-	    goto end; /* Null directive */
+	  if (input[pos] == '\n') /* Null directive */
+	    {
+	      result += '\n';
+	      goto end;
+	    }
 	  expect_read_identifier (name, input, pos, true);
 	  if (pos < input.size ())
 	    {
@@ -296,11 +311,17 @@ zcpp::parse_directives (void)
 	    content += input[pos++];
 
 	  parse_directive (result, name, content);
+	  result += '\n';
 	}
-    end:
-      if (ifstack.top ())
-	result += input[pos];
+      else if (ifstack.top ())
+	{
+	  std::string temp;
+	  while (pos < input.size () && input[pos] != '\n')
+	    temp += input[pos++];
+	  result += zcpp::expand (temp) + '\n';
+	}
 
+    end:
       if (input[pos] == '\n')
 	zcpp::filestack.top ()->line++;
       if (!std::isspace (input[pos]) || input[pos] == '\n')
