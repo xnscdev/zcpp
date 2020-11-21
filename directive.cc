@@ -229,6 +229,8 @@ parse_directive (std::string &result, const std::string &name,
     parse_endif (content);
   else if (name == "error")
     zcpp::error ("#error " + content);
+  else if (name == "if")
+    parse_if (content);
   else if (name == "ifdef" || name == "ifndef")
     parse_ifdef (name == "ifdef", content);
   else if (name == "include")

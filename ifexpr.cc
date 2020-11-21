@@ -217,7 +217,10 @@ parse_expr (std::size_t &i, const std::string &s)
     {
       std::string name;
       zcpp::expect_read_identifier (name, s, i, false, true);
+      return std::make_unique <zcpp::ifexpr::number> (0, true);
     }
+  else if (std::isdigit (s[i]))
+    return parse_number (i, s);
 
   zcpp::error ("unexpected character " + zcpp::bold (std::string (s[i], 1)) +
 	       " in #if expression");
@@ -228,7 +231,8 @@ bool
 zcpp::ifexpr::eval (const std::string &s)
 {
   std::size_t i = 0;
-  std::unique_ptr <zcpp::ifexpr::expr> result = parse_expr (i, s);
+  std::unique_ptr <zcpp::ifexpr::expr> result =
+    parse_expr (i, zcpp::expand (s));
   if (result == nullptr || result->eval ().raw == 0)
     return false;
   return true;

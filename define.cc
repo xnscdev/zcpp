@@ -147,7 +147,8 @@ zcpp::expand (const std::string &s, std::vector <std::string> *reserved)
 			    nested_parens++;
 			  else if (s[i] == ')')
 			    nested_parens--;
-			  else if (s[i] == ',' && nested_parens == 1)
+
+			  if (s[i] == ',' && nested_parens == 1)
 			    {
 			      args.push_back (arg);
 			      arg.clear ();
