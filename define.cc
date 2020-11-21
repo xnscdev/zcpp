@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>. *
  *************************************************************************/
 
+#include <algorithm>
 #include "zcpp.hh"
 
 std::map <std::string, std::unique_ptr <zcpp::macro>> zcpp::defines;
@@ -49,6 +50,7 @@ zcpp::macro::macro (std::vector <std::string> args, std::string value) :
   args (args)
 {
   func = true;
+  value = zcpp::expand (value, &args);
   std::size_t i = 0;
   while (i < value.size ())
     {
@@ -109,7 +111,7 @@ zcpp::define (std::string name, std::string value)
 }
 
 std::string
-zcpp::expand (const std::string &s)
+zcpp::expand (const std::string &s, std::vector <std::string> *reserved)
 {
   std::string result;
   std::size_t i = 0;
@@ -119,12 +121,84 @@ zcpp::expand (const std::string &s)
 	{
 	  std::string name;
 	  zcpp::expect_read_identifier (name, s, i);
-	  if (zcpp::defines.find (name) != zcpp::defines.end ())
+	  if ((reserved == nullptr
+	       || std::find (reserved->begin (),
+			     reserved->end (), name) == reserved->end ())
+	      && zcpp::defines.find (name) != zcpp::defines.end ())
 	    {
 	      const std::unique_ptr <zcpp::macro> &macro =
 		zcpp::defines[name];
 	      if (macro->func)
-	        ; /* TODO Add function macro expansion */
+	        {
+		  std::string temp;
+		  while (i < s.size () && std::isspace (s[i]))
+		    temp += s[i++];
+		  if (i >= s.size () || s[i] != '(')
+		    result += name + temp;
+		  else
+		    {
+		      std::vector <std::string> args;
+		      std::size_t nested_parens = 1;
+		      std::string arg;
+		      i++;
+		      while (nested_parens > 0)
+			{
+			  if (s[i] == '(')
+			    nested_parens++;
+			  else if (s[i] == ')')
+			    nested_parens--;
+			  else if (s[i] == ',' && nested_parens == 1)
+			    {
+			      args.push_back (arg);
+			      arg.clear ();
+			    }
+			  else
+			    arg += s[i];
+			  if (++i >= s.size () && nested_parens > 0)
+			    {
+			      zcpp::error ("unmatched parenthesis in "
+					   "argument list");
+			      return std::string ();
+			    }
+			}
+		      args.push_back (arg);
+		      if (args.size () != macro->args.size ())
+			{
+			  zcpp::error ("passing " +
+				       std::to_string (args.size ()) +
+				       " arguments to macro " +
+				       zcpp::bold (name) + " which takes " +
+				       std::to_string (macro->args.size ()) +
+				       " arguments");
+			  return std::string ();
+			}
+
+		      std::map <std::string, std::string> map_sub;
+		      for (std::size_t j = 0; j < args.size (); j++)
+			map_sub[macro->args[j]] = args[j];
+
+		      for (const std::string &text : macro->sub)
+			{
+			  bool matched = false;
+			  if (!text.empty ()
+			      && (std::isalpha (text[0]) || text[0] == '_'))
+			    {
+			      for (const std::string &param : macro->args)
+				{
+				  if (text == param)
+				    {
+				      result += map_sub[text];
+				      matched = true;
+				      break;
+				    }
+				}
+			      if (matched)
+				continue;
+			    }
+			  result += text;
+			}
+		    }
+		}
 	      else
 	        result += macro->sub[0];
 	    }

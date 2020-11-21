@@ -155,7 +155,8 @@ namespace zcpp
   void error (std::string msg);
 
   void define (std::string name, std::string value);
-  std::string expand (const std::string &s);
+  std::string expand (const std::string &s,
+		      std::vector <std::string> *reserved = nullptr);
 
   std::string parse_directives (void);
 
