@@ -42,7 +42,7 @@ check_valid_identifier (std::vector <std::string> &args, std::string &value)
 zcpp::macro::macro (std::string value)
 {
   func = false;
-  sub.push_back (value);
+  sub.push_back (zcpp::expand (value));
 }
 
 zcpp::macro::macro (std::vector <std::string> args, std::string value) :
@@ -63,8 +63,6 @@ zcpp::macro::macro (std::vector <std::string> args, std::string value) :
       sub.push_back (temp);
     }
 }
-
-#include <iostream>
 
 void
 zcpp::define (std::string name, std::string value)
