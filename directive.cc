@@ -97,7 +97,7 @@ parse_if (const std::string &content)
   if (content.empty ())
     zcpp::error ("expected expression after #if directive");
   else
-    ifstack.push (zcpp::ifexpr::eval (content));
+    ifstack.push (true); /* TODO Re-implement #if */
 }
 
 static void
