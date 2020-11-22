@@ -59,11 +59,31 @@ namespace zcpp
       static const int right_shift;
       static const int logical_and;
       static const int logical_or;
+      static const int equal;
+      static const int not_equal;
+      static const int less;
+      static const int less_equal;
+      static const int greater;
+      static const int greater_equal;
 
       binary (int op, expr &lhs, expr &rhs) : op (op), lhs (lhs),
 					      rhs (rhs) {}
 
       virtual number eval (void);
+    };
+
+    class unary : public expr
+    {
+    public:
+      int op;
+      expr &operand;
+
+      static const int plus;
+      static const int minus;
+      static const int bitwise_not;
+      static const int logical_not;
+
+      unary (int op, expr &operand) : op (op), operand (operand) {}
     };
 
     class defined : public expr

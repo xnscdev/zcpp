@@ -30,6 +30,186 @@ const int zcpp::ifexpr::binary::left_shift = 7;
 const int zcpp::ifexpr::binary::right_shift = 8;
 const int zcpp::ifexpr::binary::logical_and = 9;
 const int zcpp::ifexpr::binary::logical_or = 10;
+const int zcpp::ifexpr::binary::equal = 11;
+const int zcpp::ifexpr::binary::not_equal = 12;
+const int zcpp::ifexpr::binary::less = 13;
+const int zcpp::ifexpr::binary::less_equal = 14;
+const int zcpp::ifexpr::binary::greater = 15;
+const int zcpp::ifexpr::binary::greater_equal = 16;
+
+const int zcpp::ifexpr::unary::plus = 32;
+const int zcpp::ifexpr::unary::minus = 33;
+const int zcpp::ifexpr::unary::bitwise_not = 34;
+const int zcpp::ifexpr::unary::logical_not = 35;
+
+static std::map <int, int> operator_precedences = {
+  {zcpp::ifexpr::binary::logical_or, 1},
+  {zcpp::ifexpr::binary::logical_and, 2},
+  {zcpp::ifexpr::binary::bitwise_or, 3},
+  {zcpp::ifexpr::binary::bitwise_xor, 4},
+  {zcpp::ifexpr::binary::bitwise_and, 5},
+  {zcpp::ifexpr::binary::equal, 6},
+  {zcpp::ifexpr::binary::not_equal, 6},
+  {zcpp::ifexpr::binary::less, 7},
+  {zcpp::ifexpr::binary::less_equal, 7},
+  {zcpp::ifexpr::binary::greater, 7},
+  {zcpp::ifexpr::binary::greater_equal, 7},
+  {zcpp::ifexpr::binary::left_shift, 8},
+  {zcpp::ifexpr::binary::right_shift, 8},
+  {zcpp::ifexpr::binary::plus, 9},
+  {zcpp::ifexpr::binary::minus, 9},
+  {zcpp::ifexpr::binary::multiply, 10},
+  {zcpp::ifexpr::binary::divide, 10},
+  {zcpp::ifexpr::unary::plus, 11},
+  {zcpp::ifexpr::unary::minus, 11},
+  {zcpp::ifexpr::unary::bitwise_not, 11},
+  {zcpp::ifexpr::unary::logical_not, 11}
+};
+
+static unsigned long long numval;
+static std::string strval;
+
+enum class token
+  {
+    null,
+    integer,
+    identifier,
+    operation,
+    misc
+  };
+
+static token
+next_token (std::size_t &i, const std::string &s)
+{
+  while (i < s.size () && std::isspace (s[i]))
+    i++;
+  if (i >= s.size ())
+    return token::null;
+
+  if (std::isdigit (s[i]))
+    {
+      numval = 0;
+      do
+	{
+	  numval *= 10;
+	  numval += s[i++] - '0';
+	}
+      while (i < s.size () && std::isdigit (s[i]));
+      return token::integer;
+    }
+  else if (std::isalpha (s[i]) || s[i] == '_')
+    {
+      strval.clear ();
+      do
+	strval += s[i++];
+      while (i < s.size () && (std::isalnum (s[i]) || s[i] == '_'));
+      return token::identifier;
+    }
+
+  switch (s[i])
+    {
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '^':
+    case '~':
+      strval = std::string (1, s[i++]);
+      return token::operation;
+    case '<':
+    case '>':
+      strval = std::string (1, s[i++]);
+      if (i < s.size ())
+	{
+	  if (s[i] == '=')
+	    {
+	      strval += '=';
+	      i++;
+	    }
+	  else if (s[i] == s[i - 1])
+	    strval += s[i++];
+	}
+      return token::operation;
+    case '&':
+    case '|':
+      strval = std::string (1, s[i++]);
+      if (i < s.size () && s[i] == s[i - 1])
+	strval += s[i++];
+      return token::operation;
+    case '=':
+    case '!':
+      strval = std::string (1, s[i++]);
+      if (i < s.size () && s[i] == '=')
+	{
+	  strval += '=';
+	  i++;
+	}
+      return token::operation;
+    default:
+      strval = std::string (1, s[i++]);
+      return token::misc;
+    }
+}
+
+static std::unique_ptr <zcpp::ifexpr::defined>
+parse_defined (std::size_t &i, const std::string &s)
+{
+  switch (next_token (i, s))
+    {
+    case token::identifier:
+      return std::make_unique <zcpp::ifexpr::defined> (strval);
+    case token::misc:
+      if (strval == "(")
+	{
+	  if (next_token (i, s) != token::identifier)
+	    {
+	      zcpp::error ("expected an identifier expression after " +
+			   zcpp::bold ("defined"));
+	      return nullptr;
+	    }
+	  std::unique_ptr <zcpp::ifexpr::defined> result =
+	    std::make_unique <zcpp::ifexpr::defined> (strval);
+	  if (next_token (i, s), strval != ")")
+	    {
+	      zcpp::error ("unmatched parentheses after " +
+			   zcpp::bold ("defined"));
+	      return nullptr;
+	    }
+	  return result;
+	}
+    default:
+      zcpp::error ("expected an identifier expression after " +
+		   zcpp::bold ("defined"));
+      return nullptr;
+    }
+}
+
+static std::unique_ptr <zcpp::ifexpr::expr>
+parse_primary (std::size_t &i, const std::string &s)
+{
+  switch (next_token (i, s))
+    {
+    case token::null:
+      return nullptr;
+    case token::integer:
+      return std::make_unique <zcpp::ifexpr::number> (numval,
+						      numval <= LLONG_MAX);
+    case token::identifier:
+      if (strval == "defined")
+	return parse_defined (i, s);
+      return std::make_unique <zcpp::ifexpr::number> (0, true);
+    default:
+      zcpp::error ("unexpected character " + zcpp::bold (strval) +
+		   " in #if expression");
+      return nullptr;
+    }
+}
+
+static std::unique_ptr <zcpp::ifexpr::expr>
+parse_expr (std::size_t &i, const std::string &s)
+{
+  return parse_primary (i, s);
+}
 
 zcpp::ifexpr::number
 zcpp::ifexpr::number::operator+ (const zcpp::ifexpr::number &rhs)
@@ -168,71 +348,31 @@ zcpp::ifexpr::number::eval (void)
   return *this;
 }
 
-static std::unique_ptr <zcpp::ifexpr::number>
-parse_number (std::size_t &i, const std::string &s)
-{
-  std::string temp;
-  do
-    temp += s[i++];
-  while (i < s.size () && (isdigit (s[i]) || std::tolower (s[i]) == 'x'));
-  std::size_t pos;
-  unsigned long long num = std::stoull (temp, &pos, 0);
-  if (pos < temp.size ())
-    {
-      zcpp::error ("invalid integer literal in #if expression");
-      return nullptr;
-    }
-  if (i >= s.size ())
-    return std::make_unique <zcpp::ifexpr::number> (num, num <= LLONG_MAX);
-  if (!std::isspace (s[i]))
-    {
-      zcpp::error ("invalid integer literal in #if expression");
-      return nullptr;
-    }
-  while (i < s.size () && std::isspace (s[i]))
-    i++;
-  return std::make_unique <zcpp::ifexpr::number> (num, num <= LLONG_MAX);
-}
-
-static std::unique_ptr <zcpp::ifexpr::expr>
-parse_expr (std::size_t &i, const std::string &s)
-{
-  if (s[i] == '(')
-    {
-      if (++i >= s.size ())
-	{
-	  zcpp::error ("unmatched parentheses in #if expression");
-	  return nullptr;
-	}
-      std::unique_ptr <zcpp::ifexpr::expr> result = parse_expr (i, s);
-      if (i >= s.size () || s[i] != ')')
-	{
-	  zcpp::error ("unmatched parentheses in #if expression");
-	  return nullptr;
-	}
-      i++;
-      return result;
-    }
-  else if (std::isalpha (s[i]) || s[i] == '_')
-    {
-      std::string name;
-      zcpp::expect_read_identifier (name, s, i, false, true);
-      return std::make_unique <zcpp::ifexpr::number> (0, true);
-    }
-  else if (std::isdigit (s[i]))
-    return parse_number (i, s);
-
-  zcpp::error ("unexpected character " + zcpp::bold (std::string (s[i], 1)) +
-	       " in #if expression");
-  return nullptr;
-}
-
 bool
 zcpp::ifexpr::eval (const std::string &s)
 {
+  std::vector <std::string> reserved = {"defined"};
+  std::size_t pos = s.find ("defined", 0);
+  while (pos != std::string::npos)
+    {
+      while (pos < s.size () && !std::isspace (s[pos]))
+	pos++;
+      while (pos < s.size () && std::isspace (s[pos]))
+	pos++;
+      if (pos >= s.size ())
+	break;
+      if (s[pos] == '(')
+	pos++;
+
+      std::string temp;
+      zcpp::expect_read_identifier (temp, s, pos);
+      reserved.push_back (temp);
+      pos = s.find ("defined", pos + 1);
+    }
+
   std::size_t i = 0;
   std::unique_ptr <zcpp::ifexpr::expr> result =
-    parse_expr (i, zcpp::expand (s));
+    parse_expr (i, zcpp::expand (s, &reserved));
   if (result == nullptr || result->eval ().raw == 0)
     return false;
   return true;

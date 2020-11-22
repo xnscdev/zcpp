@@ -329,5 +329,7 @@ zcpp::parse_directives (void)
       if (!std::isspace (input[pos]) || input[pos] == '\n')
 	last = input[pos];
     }
+  if (ifstack.size () > 1)
+    zcpp::error ("unmatched #if, expected " + zcpp::bold ("#endif"));
   return result;
 }
