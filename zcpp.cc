@@ -85,6 +85,18 @@ main (int argc, char **argv)
   zcpp::define ("__STDC_HOSTED__", "1");
   zcpp::define ("__STDC_VERSION__", "199409L");
   zcpp::define ("__CHAR_BIT__", "8");
+  zcpp::define ("__SIZEOF_INT__", SIZEOF_INT);
+  zcpp::define ("__SIZEOF_LONG__", SIZEOF_LONG);
+  zcpp::define ("__SIZEOF_LONG_LONG__", SIZEOF_LONG_LONG);
+  zcpp::define ("__SIZEOF_SHORT__", SIZEOF_SHORT);
+  zcpp::define ("__SIZEOF_POINTER__", SIZEOF_POINTER);
+  zcpp::define ("__SIZEOF_FLOAT__", SIZEOF_FLOAT);
+  zcpp::define ("__SIZEOF_DOUBLE__", SIZEOF_DOUBLE);
+  zcpp::define ("__SIZEOF_LONG_DOUBLE__", SIZEOF_LONG_DOUBLE);
+  zcpp::define ("__SIZEOF_SIZE_T__", SIZEOF_SIZE_T);
+  zcpp::define ("__SIZEOF_WCHAR_T__", SIZEOF_WCHAR_T);
+  zcpp::define ("__SIZEOF_WINT_T__", SIZEOF_WINT_T);
+  zcpp::define ("__SIZEOF_PTRDIFF_T__", SIZEOF_PTRDIFF_T);
   zcpp::define (ARCH_MACRO, "1");
   zcpp::define ("__has_attribute x", "0"); /* Don't support any attributes */
 

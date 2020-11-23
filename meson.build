@@ -38,6 +38,23 @@ elif host_machine.cpu_family() == 'aarch64'
   zcpp_conf.set('ARCH_MACRO', '__arm64__')
 endif
 
+zcpp_conf.set('SIZEOF_INT', cxx.sizeof('int'))
+zcpp_conf.set('SIZEOF_LONG', cxx.sizeof('long'))
+zcpp_conf.set('SIZEOF_LONG_LONG', cxx.sizeof('long long'))
+zcpp_conf.set('SIZEOF_SHORT', cxx.sizeof('short'))
+zcpp_conf.set('SIZEOF_POINTER', cxx.sizeof('void *'))
+zcpp_conf.set('SIZEOF_FLOAT', cxx.sizeof('float'))
+zcpp_conf.set('SIZEOF_DOUBLE', cxx.sizeof('double'))
+zcpp_conf.set('SIZEOF_LONG_DOUBLE', cxx.sizeof('long double'))
+zcpp_conf.set('SIZEOF_SIZE_T',
+	      cxx.sizeof('size_t', prefix: '#include <stddef.h>'))
+zcpp_conf.set('SIZEOF_WCHAR_T',
+	      cxx.sizeof('wchar_t', prefix: '#include <wchar.h>'))
+zcpp_conf.set('SIZEOF_WINT_T',
+	      cxx.sizeof('wint_t', prefix: '#include <wchar.h>'))
+zcpp_conf.set('SIZEOF_PTRDIFF_T',
+	      cxx.sizeof('ptrdiff_t', prefix: '#include <stddef.h>'))
+
 configure_file(input: 'config.h.in', output: 'config.h',
 	       configuration: zcpp_conf)
 
