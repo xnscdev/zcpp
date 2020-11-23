@@ -99,6 +99,7 @@ main (int argc, char **argv)
   zcpp::define ("__SIZEOF_PTRDIFF_T__", SIZEOF_PTRDIFF_T);
   zcpp::define (ARCH_MACRO, "1");
   zcpp::define ("__has_attribute x", "0"); /* Don't support any attributes */
+  zcpp::define ("__has_feature x", "0");
 
   bool parsing_opts = true;
   for (int i = 1; i < argc; i++)

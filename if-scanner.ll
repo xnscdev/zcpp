@@ -19,6 +19,7 @@
 IS	[a-zA-Z_]
 IE	[a-zA-Z0-9_]
 D	[0-9]
+S	([lL][uU]|[uU][lL]|[lL]|[uU])
 
 %{
 
@@ -63,7 +64,7 @@ extern "C" int yywrap (void);
 ")"		return RPAREN;
 "defined"	return DEFINED;
 {IS}{IE}*       SAVE; return IDENTIFIER;
-{D}+		SAVE; return NUMBER;
+{D}+{S}?	SAVE; return NUMBER;
 .		yyerror ("unexpected character in #if directive"); END;
 
 %%
