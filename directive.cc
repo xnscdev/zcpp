@@ -112,10 +112,7 @@ parse_else (const std::string &content)
   if (!content.empty ())
     zcpp::warning ("ignoring extra tokens at end of #else directive");
   if (ifstack.size () > 1)
-    {
-      if (!elifstack.top ())
-	ifstack.top () = true;
-    }
+    ifstack.top () = !elifstack.top ();
   else
     zcpp::error ("unmatched #else directive");
 }
@@ -140,6 +137,8 @@ parse_if (const std::string &content)
   if (content.empty ())
     {
       zcpp::error ("expected expression after #if directive");
+      ifstack.push (false);
+      elifstack.push (false);
       return;
     }
   if (!ifstack.top ())
@@ -159,10 +158,14 @@ parse_if (const std::string &content)
 	  return;
 	}
       if (yyparse () != 0)
-	return;
+	{
+	  ifstack.push (false);
+	  elifstack.push (false);
+	  return;
+	}
       free (buffer);
       ifstack.push (if_result);
-      elifstack.push (false);
+      elifstack.push (if_result);
     }
 }
 
@@ -181,8 +184,9 @@ parse_ifdef (bool truth, const std::string &content)
   if (i < content.size ())
     zcpp::warning (std::string ("ignoring extra tokens at end of ") +
 		   ifdef_names[(int) truth] + " directive");
-  ifstack.push (truth == (zcpp::defines.find (name) != zcpp::defines.end ()));
-  elifstack.push (false);
+  bool result = truth == (zcpp::defines.find (name) != zcpp::defines.end ());
+  ifstack.push (result);
+  elifstack.push (result);
 }
 
 static void

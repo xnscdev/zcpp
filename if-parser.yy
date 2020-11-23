@@ -45,13 +45,39 @@ bool if_result;
 %token MINUS "-"
 %token MULTIPLY "*"
 %token DIVIDE "/"
+%token MODULUS "%"
+%token LSHIFT "<<"
+%token RSHIFT ">>"
+%token LE "<="
+%token LT "<"
+%token GE ">="
+%token GT ">"
+%token EQ "=="
+%token NE "!="
+%token LOG_AND "&&"
+%token LOG_OR "||"
+%token LOG_NOT "!"
+%token BIT_AND "&"
+%token BIT_XOR "^"
+%token BIT_OR "|"
+%token BIT_NOT "~"
 %token LPAREN "("
 %token RPAREN ")"
+%token YYEOF "end of expression"
 
-%type	<number>	expression number
+%type	<number>	expression defined_expression number
 
+%left "||"
+%left "&&"
+%left "|"
+%left "^"
+%left "&"
+%left "==" "!="
+%left "<" "<=" ">" ">="
+%left "<<" ">>"
 %left "+" "-"
-%left "*" "/"
+%left "*" "/" "%"
+%precedence UNARY
 
 %start input
 
@@ -62,11 +88,29 @@ input:		expression { if_result = $1 != 0; }
 
 expression:	number
 	|	"identifier" { $$ = 0; delete $1; }
+	|	defined_expression
 	|	expression "+" expression { $$ = $1 + $3; }
 	|	expression "-" expression { $$ = $1 - $3; }
 	|	expression "*" expression { $$ = $1 * $3; }
 	|	expression "/" expression { $$ = $1 / $3; }
+	|	expression "%" expression { $$ = $1 % $3; }
+	|	expression "<<" expression { $$ = $1 << $3; }
+	|	expression ">>" expression { $$ = $1 >> $3; }
+	|	expression "<=" expression { $$ = $1 <= $3; }
+	|	expression "<" expression { $$ = $1 < $3; }
+	|	expression ">=" expression { $$ = $1 >= $3; }
+	|	expression ">" expression { $$ = $1 > $3; }
+	|	expression "==" expression { $$ = $1 == $3; }
+	|	expression "!=" expression { $$ = $1 != $3; }
+	|	expression "&&" expression { $$ = $1 && $3; }
+	|	expression "||" expression { $$ = $1 || $3; }
+	|	expression "&" expression { $$ = $1 & $3; }
+	|	expression "^" expression { $$ = $1 ^ $3; }
+	|	expression "|" expression { $$ = $1 | $3; }
 	|	"(" expression ")" { $$ = $2; }
+	|	%prec UNARY "-" expression { $$ = -$2; }
+	|	%prec UNARY "!" expression { $$ = !$2; }
+	|	%prec UNARY "~" expression { $$ = ~$2; }
 	;
 
 number:		"number"
@@ -80,6 +124,19 @@ number:		"number"
 		      YYERROR;
 		    }
 		  delete $1;
+		}
+	;
+
+defined_expression:
+		"defined" "identifier"
+		{
+		  $$ = zcpp::defines.find (*$2) != zcpp::defines.end ();
+		  delete $2;
+		}
+	|	"defined" "(" "identifier" ")"
+		{
+		  $$ = zcpp::defines.find (*$3) != zcpp::defines.end ();
+		  delete $3;
 		}
 	;
 
