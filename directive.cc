@@ -18,9 +18,13 @@
 
 #include <cstring>
 #include <fstream>
+#include "if-parser.hh"
 #include "zcpp.hh"
 
 #define input zcpp::filestack.top ()->output
+
+extern FILE *yyin;
+extern bool if_result;
 
 static std::stack <bool> ifstack;
 static std::string ifdef_names[] = {"#ifndef", "#ifdef"};
@@ -97,7 +101,20 @@ parse_if (const std::string &content)
   if (content.empty ())
     zcpp::error ("expected expression after #if directive");
   else
-    ifstack.push (true); /* TODO Re-implement #if */
+    {
+      void *buffer = malloc (content.size ());
+      memcpy (buffer, content.c_str (), content.size ());
+      yyin = fmemopen (buffer, content.size (), "r");
+      if (yyin == nullptr)
+	{
+	  zcpp::error ("failed to open memory stream");
+	  return;
+	}
+      if (yyparse () != 0)
+	return;
+      free (buffer);
+      ifstack.push (if_result);
+    }
 }
 
 static void
