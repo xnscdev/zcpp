@@ -79,6 +79,13 @@ main (int argc, char **argv)
     (std::make_unique <zcpp::translation_unit> ("<command-line>", std::cin));
   zcpp::init_console ();
   zcpp::includes.emplace_back (".", zcpp::include::quote);
+
+  /* Define default macros */
+  zcpp::define ("__STDC__", "1");
+  zcpp::define ("__STDC_HOSTED__", "1");
+  zcpp::define ("__STDC_VERSION__", "199409L");
+  zcpp::define ("__CHAR_BIT__", "8");
+
   bool parsing_opts = true;
   for (int i = 1; i < argc; i++)
     {

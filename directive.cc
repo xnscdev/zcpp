@@ -314,6 +314,8 @@ parse_directive (std::string &result, const std::string &name,
     parse_include (result, content);
   else if (name == "line")
     parse_line (content);
+  else if (name == "pragma")
+    ; /* Ignore all #pragma directives */
   else if (name == "undef")
     parse_undef (content);
   else if (name == "warning")
