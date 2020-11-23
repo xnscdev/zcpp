@@ -27,6 +27,7 @@ extern FILE *yyin;
 extern bool if_result;
 
 static std::stack <bool> ifstack;
+static std::stack <bool> elifstack;
 static std::string ifdef_names[] = {"#ifndef", "#ifdef"};
 
 static void
@@ -72,12 +73,49 @@ parse_define (const std::string &content)
 }
 
 static void
+parse_elif (const std::string &content)
+{
+  if (content.empty ())
+    {
+      zcpp::error ("expected expression after #elif directive");
+      return;
+    }
+  if (ifstack.size () <= 1)
+    {
+      zcpp::error ("unmatched #elif directive");
+      return;
+    }
+  if (ifstack.top () || elifstack.top ())
+    {
+      ifstack.top () = false;
+      return;
+    }
+
+  void *buffer = malloc (content.size ());
+  memcpy (buffer, content.c_str (), content.size ());
+  yyin = fmemopen (buffer, content.size (), "r");
+  if (yyin == nullptr)
+    {
+      zcpp::error ("failed to open memory stream");
+      return;
+    }
+  if (yyparse () != 0)
+    return;
+  free (buffer);
+  ifstack.top () = if_result;
+  elifstack.top () = if_result;
+}
+
+static void
 parse_else (const std::string &content)
 {
   if (!content.empty ())
     zcpp::warning ("ignoring extra tokens at end of #else directive");
   if (ifstack.size () > 1)
-    ifstack.top () ^= true;
+    {
+      if (!elifstack.top ())
+	ifstack.top () = true;
+    }
   else
     zcpp::error ("unmatched #else directive");
 }
@@ -88,7 +126,10 @@ parse_endif (const std::string &content)
   if (!content.empty ())
     zcpp::warning ("ignoring extra tokens at end of #endif directive");
   if (ifstack.size () > 1)
-    ifstack.pop ();
+    {
+      ifstack.pop ();
+      elifstack.pop ();
+    }
   else
     zcpp::error ("unmatched #endif directive");
 }
@@ -96,10 +137,17 @@ parse_endif (const std::string &content)
 static void
 parse_if (const std::string &content)
 {
-  if (!ifstack.top ())
-    return;
   if (content.empty ())
-    zcpp::error ("expected expression after #if directive");
+    {
+      zcpp::error ("expected expression after #if directive");
+      return;
+    }
+  if (!ifstack.top ())
+    {
+      ifstack.push (false);
+      elifstack.push (false);
+      return;
+    }
   else
     {
       void *buffer = malloc (content.size ());
@@ -114,6 +162,7 @@ parse_if (const std::string &content)
 	return;
       free (buffer);
       ifstack.push (if_result);
+      elifstack.push (false);
     }
 }
 
@@ -123,12 +172,17 @@ parse_ifdef (bool truth, const std::string &content)
   std::string name;
   std::size_t i = 0;
   if (!ifstack.top ())
-    return;
+    {
+      ifstack.push (false);
+      elifstack.push (false);
+      return;
+    }
   zcpp::expect_read_identifier (name, content, i, false, true);
   if (i < content.size ())
     zcpp::warning (std::string ("ignoring extra tokens at end of ") +
 		   ifdef_names[(int) truth] + " directive");
   ifstack.push (truth == (zcpp::defines.find (name) != zcpp::defines.end ()));
+  elifstack.push (false);
 }
 
 static void
@@ -240,6 +294,8 @@ parse_directive (std::string &result, const std::string &name,
 {
   if (name == "define")
     parse_define (content);
+  else if (name == "elif")
+    parse_elif (content);
   else if (name == "else")
     parse_else (content);
   else if (name == "endif")
