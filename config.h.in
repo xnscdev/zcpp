@@ -20,5 +20,6 @@
 #define _CONFIG_H
 
 #define PROJECT_VERSION "@PROJECT_VERSION@"
+#define ARCH_MACRO "@ARCH_MACRO@"
 
 #endif

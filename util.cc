@@ -18,17 +18,18 @@
 
 #include "zcpp.hh"
 
-void
+bool
 zcpp::expect_read_identifier (std::string &result, const std::string &input,
 			      std::size_t &pos, bool first_num,
-			      bool end_space)
+			      bool end_space, bool print_err)
 {
   if (!std::isalpha (input[pos])
       && (!first_num || !std::isdigit (input[pos])) && input[pos] != '_')
     {
-      zcpp::error (std::string ("expected identifier, got bad character: ") +
-		   input[pos]);
-      return;
+      if (print_err)
+	zcpp::error (std::string ("expected identifier, got bad "
+				  "character: ") + input[pos]);
+      return false;
     }
   while (pos < input.size ()
 	 && (std::isalnum (input[pos]) || input[pos] == '_'))
@@ -37,16 +38,18 @@ zcpp::expect_read_identifier (std::string &result, const std::string &input,
   if (end_space)
     {
       if (pos >= input.size ())
-	return;
+	return true;
       if (!std::isspace (input[pos]))
 	{
-	  zcpp::error (std::string ("expected identifier, got bad character:"
-				    " ") + input[pos]);
-	  return;
+	  if (print_err)
+	    zcpp::error (std::string ("expected identifier, got bad "
+				      "character: ") + input[pos]);
+	  return false;
 	}
       while (pos < input.size () && std::isspace (input[pos]))
 	pos++;
     }
+  return true;
 }
 
 void

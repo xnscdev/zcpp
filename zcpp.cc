@@ -85,6 +85,8 @@ main (int argc, char **argv)
   zcpp::define ("__STDC_HOSTED__", "1");
   zcpp::define ("__STDC_VERSION__", "199409L");
   zcpp::define ("__CHAR_BIT__", "8");
+  zcpp::define (ARCH_MACRO, "1");
+  zcpp::define ("__has_attribute x", "0"); /* Don't support any attributes */
 
   bool parsing_opts = true;
   for (int i = 1; i < argc; i++)

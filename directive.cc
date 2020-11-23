@@ -30,6 +30,38 @@ static std::stack <bool> ifstack;
 static std::stack <bool> elifstack;
 static std::string ifdef_names[] = {"#ifndef", "#ifdef"};
 
+#include <iostream>
+
+static std::vector <std::string> *
+search_defined_calls (const std::string &s)
+{
+  std::vector <std::string> *reserved =
+    new std::vector <std::string> {"defined"};
+  std::size_t pos = s.find ("defined", 0);
+  while (pos != std::string::npos)
+    {
+      pos += 7;
+      while (pos < s.size () && std::isspace (s[pos]))
+	pos++;
+      if (pos >= s.size ())
+	break;
+      if (s[pos] == '(')
+	{
+	  pos++;
+	  while (pos < s.size () && isspace (s[pos]))
+	    pos++;
+	  if (pos >= s.size ())
+	    break;
+	}
+
+      std::string temp;
+      if (zcpp::expect_read_identifier (temp, s, pos, false, false, false))
+	reserved->push_back (temp);
+      pos = s.find ("defined", pos + 1);
+    }
+  return reserved;
+}
+
 static void
 parse_define (const std::string &content)
 {
@@ -62,7 +94,7 @@ parse_define (const std::string &content)
 	}
       i++;
     }
-  if (!std::isspace (content[i]))
+  if (i < content.size () && !std::isspace (content[i]))
     {
       zcpp::error ("macro name must be a valid identifier");
       return;
@@ -91,9 +123,12 @@ parse_elif (const std::string &content)
       return;
     }
 
-  void *buffer = malloc (content.size ());
-  memcpy (buffer, content.c_str (), content.size ());
-  yyin = fmemopen (buffer, content.size (), "r");
+  std::vector <std::string> *reserved = search_defined_calls (content);
+  std::string s (zcpp::expand (content, reserved));
+  delete reserved;
+  void *buffer = malloc (s.size ());
+  memcpy (buffer, s.c_str (), s.size ());
+  yyin = fmemopen (buffer, s.size (), "r");
   if (yyin == nullptr)
     {
       zcpp::error ("failed to open memory stream");
@@ -149,9 +184,12 @@ parse_if (const std::string &content)
     }
   else
     {
-      void *buffer = malloc (content.size ());
-      memcpy (buffer, content.c_str (), content.size ());
-      yyin = fmemopen (buffer, content.size (), "r");
+      std::vector <std::string> *reserved = search_defined_calls (content);
+      std::string s (zcpp::expand (content, reserved));
+      delete reserved;
+      void *buffer = malloc (s.size ());
+      memcpy (buffer, s.c_str (), s.size ());
+      yyin = fmemopen (buffer, s.size (), "r");
       if (yyin == nullptr)
 	{
 	  zcpp::error ("failed to open memory stream");

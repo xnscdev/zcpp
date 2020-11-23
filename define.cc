@@ -92,7 +92,7 @@ zcpp::define (std::string name, std::string value)
 	  else
 	    temp += name[i];
 	}
-      if (temp.empty ())
+      if (temp.empty () && !args.empty ())
 	{
 	  zcpp::error ("extraneous comma at end of parameter list");
 	  return;

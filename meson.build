@@ -25,7 +25,19 @@ if_parser = bison_gen.process('if-parser.yy')
 if_scanner = flex_gen.process('if-scanner.ll')
 
 zcpp_conf = configuration_data()
+
 zcpp_conf.set('PROJECT_VERSION', meson.project_version())
+
+if host_machine.cpu_family() == 'x86'
+  zcpp_conf.set('ARCH_MACRO', '__i386__')
+elif host_machine.cpu_family() == 'x86_64'
+  zcpp_conf.set('ARCH_MACRO', '__x86_64__')
+elif host_machine.cpu_family() == 'arm'
+  zcpp_conf.set('ARCH_MACRO', '__arm__')
+elif host_machine.cpu_family() == 'aarch64'
+  zcpp_conf.set('ARCH_MACRO', '__arm64__')
+endif
+
 configure_file(input: 'config.h.in', output: 'config.h',
 	       configuration: zcpp_conf)
 

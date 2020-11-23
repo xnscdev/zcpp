@@ -93,9 +93,9 @@ namespace zcpp
   void add_includedir (std::string path, int type);
   std::string stamp_file (void);
 
-  void expect_read_identifier (std::string &result, const std::string &input,
+  bool expect_read_identifier (std::string &result, const std::string &input,
 			       std::size_t &pos, bool first_num = false,
-			       bool end_space = false);
+			       bool end_space = false, bool print_err = true);
   void expect_read_string (std::string &result, const std::string &input,
 			   std::size_t &pos);
 }
